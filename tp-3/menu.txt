@@ -1,0 +1,9 @@
+===MEALS
+M01;Thai Beef Salad;52000
+M02;Beef Korean Noodle;56000
+===DRINKS
+D01;Green Smoothies;25000
+D02;Golden Glow;30000
+===TOPPINGS
+T01;Soft Boiled Egg;10000
+T02;Edamame;10000
