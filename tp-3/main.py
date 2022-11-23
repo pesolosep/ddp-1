@@ -1,6 +1,7 @@
 import sys
 
 table = {(i+1): {} for i in range(10)}
+names = {(i+1): {} for i in range(10)}
 
 
 def format_money(amount):
@@ -78,10 +79,11 @@ def display_order(menu, ordered):
     print(f"\nTotal pesanan: {format_money(total)}")
 
 
-def assign_table(ordered):
+def assign_table(ordered, name):
     table_num = get_available_table()
-    table[table_num] = ordered
     if table_num < 11:
+        names[table_num] = name
+        table[table_num] = ordered
         print(
             f"Pesanan akan kami proses, Anda bisa menggunakan meja nomor {table_num}. Terima kasih.")
     else:
@@ -89,7 +91,8 @@ def assign_table(ordered):
     print("\n---")
 
 
-def select_menu(menu, ordered={}):
+def select_menu(menu):
+    ordered = {}
     prev_order = ""
     while True:
         if prev_order:
@@ -116,7 +119,7 @@ def select_menu(menu, ordered={}):
 
 
 def add_order(menu, ordered):
-    menu_input = input("Menu apa yang ingin Anda ganti jumlahnya: ")
+    menu_input = input("Menu apa yang ingin Anda pesan: ")
     menu_name = ""
     for listing in menu.values():
         if menu_input in listing['codes']:
@@ -128,10 +131,13 @@ def add_order(menu, ordered):
             menu_name = prev_order
             break
     else:
-        print(f"Menu {menu_input} tidak ditemukan! ", end="")
+        print(f"Menu {menu_input} tidak ditemukan! ", end=" ")
         return ordered
-    ordered[menu_name] = ordered.get(menu_name, 0) + 1
-    print(f"Berhasil memesan {menu_name}.")
+    if ordered.get(menu_name, 0) != 0:
+        ordered[menu_name] = ordered.get(menu_name, 0) + 1
+        print(f"Berhasil memesan {menu_name}.", end=" ")
+    else:
+        print(f"Menu {menu_input} tidak ditemukan! ", end=" ")
     return ordered
 
 
@@ -192,18 +198,20 @@ def delete_order(menu, ordered):
     return ordered
 
 
+def finish_table(ordered, name):
+    print(ordered, name)
+
+
 def main():
     menu = parse_menu()
     while True:
         print("Selamat datang di Kafe Daun Daun Pacilkom")
         command = input("Apa yang ingin Anda lakukan? ")
-        new_order = {}
         if command == "BUAT PESANAN":
-            input("Siapa nama Anda? ")
+            nama = input("Siapa nama Anda? ")
             print()
             print_menu(menu)
-            new_order = select_menu(menu)
-            assign_table(new_order)
+            assign_table(select_menu(menu), nama)
         if command == "UBAH PESANAN":
             try:
                 table_num = int(input("Nomor meja berapa? "))
@@ -211,7 +219,7 @@ def main():
                     raise ValueError
                 print()
                 print_menu(menu)
-                display_order(menu, new_order)
+                display_order(menu, table[table_num])
                 print()
                 order_to_update = table[table_num]
                 while True:
@@ -223,17 +231,49 @@ def main():
                         print("\n---")
                         break
                     elif action == "GANTI JUMLAH":
-                        new_order = change_amount(menu, order_to_update)
+                        table[table_num] = change_amount(menu, order_to_update)
                     elif action == "HAPUS":
-                        delete_order(menu, order_to_update)
+                        table[table_num] = delete_order(menu, order_to_update)
                     elif action == "TAMBAH PESANAN":
-                        change_amount(menu, order_to_update)
+                        table[table_num] = add_order(menu, order_to_update)
                     else:
                         print(f"Input {action} tidak valid!")
-
             except ValueError:
                 print("Nomor meja kosong atau tidak sesuai!")
                 break
+        if command == "SELESAI MENGGUNAKAN MEJA":
+            try:
+                table_num = int(input("Nomor meja berapa? "))
+                if table.get(table_num, {}) == {}:
+                    raise ValueError
+                print()
+                print(
+                    f"Pelanggan atas nama {names[table_num]} selesai menggunakan meja {table_num}.")
+                ordered = table[table_num]
+                table[table_num] = {}
+                merged_menu = merge_menu(menu)
+                receipt_list = []
+                total = 0
+                for menu_name in ordered:
+                    receipt_list.append(";".join([
+                        merged_menu[menu_name]['code'],
+                        menu_name,
+                        str(ordered[menu_name]),
+                        str(merged_menu[menu_name]['price']),
+                        str(merged_menu[menu_name]
+                            ['price'] * ordered[menu_name])
+                    ]) + "\n")
+                    total += merged_menu[menu_name]['price'] * \
+                        ordered[menu_name]
+                receipt_list.append(f"Total {total}\n")
+                with open(f"receipt_{names[table_num]}.txt", "w+") as receipt:
+                    receipt.writelines(receipt_list)
+
+            except ValueError:
+                print("Nomor meja kosong atau tidak sesuai!")
+
+        if command == "SELESAI":
+            break
 
 
 if __name__ == '__main__':
