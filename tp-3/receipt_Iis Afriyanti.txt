@@ -1,0 +1,4 @@
+M02;Beef Korean Noodle;1;56000;56000
+T01;Soft Boiled Egg;3;10000;30000
+D02;Golden Glow;1;30000;30000
+Total 116000
