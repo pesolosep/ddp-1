@@ -19,15 +19,12 @@ def parse_menu():
                     # jika sudah terdapat dalam list check, maka string itu duplikat dan menu tidak valid
                     if token.get(line, None):
                         raise Exception()
-                    curr = line  # Menyimpan jenis menu pada iterasi ini
+                    # Menyimpan jenis menu pada iterasi ini
+                    curr = line.replace("===", "")
                     # Menyimpan informasi menu dalam bentuk yang dapat dipilih bedasarkan nama ataupun kode
                     # Jenis menu dijadikan key
                     # value di set ke empty dict
-                    token[line] = {}
-                    if not token[line].get('codes', {}):
-                        token[line]['codes'] = {}
-                    if not token[line].get('names', {}):
-                        token[line]['names'] = {}
+                    token[curr] = {}
 
                 else:
                     # Jika bukan jenis menu, maka dilakukan splitting
@@ -39,56 +36,12 @@ def parse_menu():
                     check = [*check, name, code]
                     # Memasukan data-data jika semua data sebelumnya valid
                     # apakah harga merupakan int atau bukan dapat divalidasi dengan fungsi int
-                    token[curr]['codes'][code] = {
-                        'name': name, 'price': int(price), 'info': int(info)}
-                    token[curr]['names'][name] = {
-                        'code': code, 'price': int(price), 'info': int(info)}
+                    token[curr] = [*token[curr], (code, name, price, info)]
     except Exception as e:
         print(e)
         print("Daftar menu tidak valid, cek kembali menu.txt!")
         sys.exit(1)
     return token
-
-
-def merge_menu(menu):  # Mengubah menu menjadi bentuk yang lebih mudah diproses
-    merged_menu = {}
-    for item in menu.values():
-        # membuang layer pertama dari nested dict
-        merged_menu = {**merged_menu, **item['names']}
-    # hasil return merupakan {nama_menu: { kode:..., harga: ...}}
-    return merged_menu
-
-def get_available_table(table):  # Mencari meja tersedia dengan nomor terkecil
-    min_val = 100  # Batas perbandingan
-    for num in table:  # Algoritma minimum search dengan metode iterasi
-        if table[num] == {} and num < min_val:
-            min_val = num
-    return min_val  # jika ada meja yang tersedia maka hasilnya nomor meja minimum jika tidak maka hasilnya 100
-
-
-class Menu:
-    def __init__(self, kode_menu, nama_menu, harga):
-        self.kode_menu = kode_menu
-        self.nama_menu = nama_menu
-        self.harga = int(harga)
-
-
-class Meals(Menu):
-    def __init__(self, kode_menu, nama_menu, harga, tingkat_kegurihan):
-        super().__init__(kode_menu, nama_menu, harga)
-        # TODO handle info tambahan
-
-
-class Drinks(Menu):
-    def __init__(self, kode_menu, nama_menu, harga, tingkat_kemanisan):
-        super().__init__(kode_menu, nama_menu, harga)
-        # TODO handle info tambahan
-
-
-class Sides(Menu):
-    def __init__(self, kode_menu, nama_menu, harga, tingkat_keviralan):
-        super().__init__(kode_menu, nama_menu, harga)
-        # TODO handle info tambahan
 
 
 class Main(tk.Frame):
@@ -126,13 +79,16 @@ class BuatPesanan(tk.Toplevel):
         self.input_nama = tk.Entry(self, textvariable=self.nama)
         self.input_nama.grid(column=1, row=0, pady=(50, 80))
         self.back_btn = tk.Button(
-            self, text="Kembali", bg="#4472C4", fg="white", width=20)
+            self, text="Kembali", bg="#4472C4", fg="white", width=20, command=self.destroy)
         self.next_btn = tk.Button(
-            self, text="Lanjut", bg="#4472C4", fg="white", width=20)
+            self, text="Lanjut", bg="#4472C4", fg="white", width=20, command=self.lanjut)
         self.back_btn.grid(column=0, row=1, padx=(30, 40))
         self.next_btn.grid(column=1, row=1)
 
         self.mainloop()
+
+    def lanjut(self):
+        Table(menu, self.nama.get(), self.master)
 
 
 class SelesaiGunakanMeja(tk.Toplevel):
@@ -150,14 +106,201 @@ class SelesaiGunakanMeja(tk.Toplevel):
         self.mainloop()
 
 
+class SelectTable(tk.Toplevel):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.master = master
+        self.curr = tk.IntVar(self.master, self.master.nomor_meja.get())
+        self.curr.trace("w", self.render_meja)
+        self.list_meja = []
+        self.render_meja()
+
+    def update_nomor(self, *_):
+        self.master.nomor_meja.set(self.curr.get())
+        self.destroy()
+
+    def meja_select(self, event):
+        if meja[int(event.widget["text"])] > -1:
+            return
+
+        self.curr.set(int(event.widget["text"]))
+
+    def warna_meja(self, num):
+        if num == self.curr.get():
+            return "#4472C4"
+        elif meja[num] > -1:
+            return "#f00"
+        return "#bbb"
+
+    def render_meja(self, *_):
+        self.title = tk.Label(
+            self, text="Silahkan klik meja kosong yang diinginkan:")
+        self.container = tk.Frame(self)
+        [btn.destroy for btn in self.list_meja]
+        for num in meja:
+            meja_btn = tk.Button(
+                self.container, text=f"{num}", bg=self.warna_meja(num), width=10, fg="white")
+            meja_btn.bind("<Button-1>", lambda event: self.meja_select(event))
+            self.list_meja.append(meja_btn)
+            meja_btn.grid(row=(num) % 5, column=(
+                0 if num < 5 else 1), padx=(5, 5), pady=(5, 5))
+        self.info_container = tk.Frame(self)
+        self.info_label = tk.Label(
+            self.info_container, text="Info", font="Arial 11 bold")
+        self.info_1 = tk.Label(self.info_container, text="Merah: Terisi")
+        self.info_2 = tk.Label(self.info_container, text="Abu-abu: Kosong")
+        self.info_3 = tk.Label(self.info_container, text="Biru: Meja Anda")
+
+        self.title.grid(row=0, column=0, padx=(40, 40))
+        self.info_label.grid(row=0, column=0)
+        self.info_1.grid(row=1, column=0)
+        self.info_2.grid(row=2, column=0)
+        self.info_3.grid(row=3, column=0)
+        self.container.grid(row=1, column=0, padx=(
+            40, 40), pady=(5, 5), columnspan=3)
+        self.info_container.grid(row=2, column=0)
+
+        self.back_btn = tk.Button(
+            self, bg="#4472C4", text="Kembali", fg="#fff", command=self.destroy, width=20)
+        self.next_btn = tk.Button(
+            self, bg="#4472C4", fg="#fff", text="OK", command=self.update_nomor, width=20)
+        self.back_btn.grid(row=3, column=0)
+        self.next_btn.grid(row=3, column=1)
+
+
+class Table(tk.Toplevel):
+    def __init__(self, data, nama, master=None):
+        super().__init__(master)
+        # self.pack()
+        self.data = data
+        self.nama = nama
+        self.total = 0
+        self.int_var = []
+        self.prices = []
+        # self.nomor_meja =
+        # self.total_rows = len(self.data)
+        # self.total_columns = len(self.data[0])
+        self.nomor_meja = tk.IntVar(self, self.get_available_table(meja))
+        self.nomor_meja.trace("w", self.update_nomor_meja)
+        self.generate_table()
+
+    def update_nomor_meja(self, *_):
+        self.nomor_meja_label["text"] = f"No Meja: {self.nomor_meja.get()}"
+
+    @ staticmethod
+    def get_available_table(table):  # Mencari meja tersedia dengan nomor terkecil
+        min_val = 100  # Batas perbandingan
+        for num in table:  # Algoritma minimum search dengan metode iterasi
+            if table[num] == -1 and num < min_val:
+                min_val = num
+        return min_val  # jika ada meja yang tersedia maka hasilnya nomor meja minimum jika tidak maka hasilnya 100
+
+    def generate_table(self):
+        self.content = tk.Frame(self)
+        self.nama_label = tk.Label(
+            self.content, text=f"Nama pemesan: {self.nama}")
+        self.nama_label.grid(row=0, column=0, pady=(0, 20))
+
+        self.meja_container = tk.Frame(self.content)
+        self.nomor_meja_label = tk.Label(
+            self.meja_container, text=f"No Meja: {self.nomor_meja.get()}")
+        self.ganti_nomor_btn = tk.Button(
+            self.meja_container, text="Ubah", command=self.pilih_meja)
+        self.nomor_meja_label.grid(row=0, column=0)
+        self.ganti_nomor_btn.grid(row=0, column=1)
+        self.meja_container.grid(row=0, column=3, columnspan=2)
+
+        k = 3
+        for key in self.data:
+            label = tk.Label(self.content, text=key)
+            label.grid(row=k, column=0)
+            k += 1
+            kode_label = tk.Entry(self.content, width=20, fg="black")
+            nama_label = tk.Entry(self.content, width=20, fg="black")
+            harga_label = tk.Entry(self.content, width=20, fg="black")
+            kode_label.insert(tk.END, "Kode")
+            kode_label.grid(row=k, column=0)
+            kode_label['state'] = 'readonly'
+            nama_label.insert(tk.END, "Nama")
+            nama_label.grid(row=k, column=1)
+            nama_label['state'] = 'readonly'
+            harga_label.insert(tk.END, "Harga")
+            harga_label.grid(row=k, column=2)
+            harga_label['state'] = 'readonly'
+
+            info_label = tk.Entry(self.content, width=20, fg="black")
+            if key == "MEALS":
+                info_label.insert(tk.END, "Kegurihan")
+            elif key == "DRINKS":
+                info_label.insert(tk.END, "Kemanisan")
+            else:
+                info_label.insert(tk.END, "Keviralan")
+            info_label.grid(row=k, column=3)
+            info_label['state'] = 'readonly'
+
+            jumlah_label = tk.Entry(self.content, width=20, fg="black")
+            jumlah_label.insert(tk.END, "Jumlah")
+            jumlah_label.grid(row=k, column=4)
+            jumlah_label['state'] = 'readonly'
+
+            k += 1
+            for i in range(len(self.data[key])):
+                for j in range(len(self.data[key][0])):
+                    entry = tk.Entry(self.content, width=20, fg='black')
+                    entry.grid(row=k, column=j)
+                    entry.insert(tk.END, self.data[key][i][j])
+                    entry['state'] = 'readonly'
+
+                # kolom paling kanan -> combobox
+                values = tuple([k for k in range(10)])
+                var = tk.IntVar()
+                opsi_jumlah = ttk.Combobox(
+                    self.content, values=values, textvariable=var)
+                var.trace("w", self.update_total)
+                self.int_var.append(var)
+                self.prices.append(int(self.data[key][i][2]))
+                opsi_jumlah.grid(
+                    row=k, column=len(self.data[key][0]))
+                k += 1
+
+        self.total_label = tk.Label(
+            self.content, text="Total harga: 0", font="Arial 12 bold")
+        self.total_label.grid(row=k+1, column=4, pady=(40, 0))
+        self.btn_container = tk.Frame(self)
+
+        self.kembali_btn = tk.Button(
+            self.btn_container, text="Kembali", fg="#fff", bg="#4472C4", command=self.destroy, width=20)
+        self.ok_btn = tk.Button(self.btn_container, fg="#fff", text="OK",
+                                bg="#4472C4", width=20)
+        self.kembali_btn.grid(row=0, column=0, padx=(5, 5))
+        self.ok_btn.grid(row=0, column=1, padx=(5, 5))
+        self.btn_container.grid(row=k+2, column=0, pady=(0, 40))
+
+        self.content.grid(row=0, column=0, padx=(40, 40), pady=(40, 40))
+
+    def lanjut(self):
+        SelectTable(self.master)
+
+    def pilih_meja(self):
+        SelectTable(self)
+
+    def update_total(self, *_):
+        self.total = 0
+        for i, var in enumerate(self.int_var):
+            self.total += var.get() * self.prices[i]
+        self.total_label["text"] = f"Total harga: {self.total}"
+
+
 def main():
-    meja = {}
+    global meja, menu
+    meja = {i: (-1 if i == 6 or i % 2 == 1 else 2) for i in range(10)}
     menu = parse_menu()
 
     # TODO mengolah data menu
 
     window = tk.Tk()
     cafe = Main(window)
+    # Table(menu, window)
     window.mainloop()
 
 
