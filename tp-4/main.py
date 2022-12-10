@@ -1,6 +1,7 @@
 # import modul
 import tkinter as tk
 import tkinter.ttk as ttk
+import tkinter.messagebox as tkmsg
 import sys
 
 
@@ -87,8 +88,29 @@ class BuatPesanan(tk.Toplevel):
 
         self.mainloop()
 
+    # Mencari meja tersedia dengan nomor terkecil
+    def get_available_table(self, table):
+        min_val = 100  # Batas perbandingan
+        for num in table:  # Algoritma minimum search dengan metode iterasi
+            if table[num] == -1 and num < min_val:
+                min_val = num
+        return min_val  # jika ada meja yang tersedia maka hasilnya nomor meja minimum jika tidak maka hasilnya 100
+
     def lanjut(self):
-        Table(menu, self.nama.get(), self.master)
+        nomor_meja = self.get_available_table(meja)
+        for val in meja.values():
+            if type(val) == int:
+                continue
+
+            if self.nama.get() in val:
+                tkmsg.showinfo(title="Nama telah digunakan",
+                               message=f"Mohon maaf, nama {self.nama.get()} telah digunakan untuk memesan meja.")
+                return self.destroy()
+        if nomor_meja == 100:
+            tkmsg.showinfo(
+                title="Meja Penuh", message="Mohon maaf, meja sedang penuh. Silakan datang kembali di lain kesempatan.")
+            return self.destroy()
+        Table(menu, self.nama.get(), self)
 
 
 class TampilanMeja(tk.Toplevel):
@@ -116,20 +138,96 @@ class TampilanMeja(tk.Toplevel):
             self.list_meja.append(meja_btn)
             meja_btn.grid(row=(num) % 5, column=(
                 0 if num < 5 else 1), padx=(5, 5), pady=(5, 5))
-        self.info_container = tk.Frame(self)
-        self.info_label = tk.Label(
-            self.info_container, text="Info", font="Arial 11 bold")
-        self.info_1 = tk.Label(self.info_container, text="Merah: Terisi")
-        self.info_2 = tk.Label(self.info_container, text="Abu-abu: Kosong")
-        self.info_3 = tk.Label(self.info_container, text="Biru: Meja Anda")
-
-        self.info_label.grid(row=0, column=0)
-        self.info_1.grid(row=1, column=0)
-        self.info_2.grid(row=2, column=0)
-        self.info_3.grid(row=3, column=0)
         self.container.grid(row=1, column=0, padx=(
-            40, 40), pady=(5, 5), columnspan=3)
-        self.info_container.grid(row=2, column=0)
+            40, 40), pady=(5, 20), columnspan=3)
+
+
+class TablePesanan(tk.Toplevel):
+    def __init__(self, num, data, master):
+        super().__init__(master)
+        self.num = num
+        self.data = data
+        self.generate_table()
+
+    def generate_table(self):
+        self.content = tk.Frame(self)
+        self.nama_label = tk.Label(
+            self.content, text=f"Nama pemesan: {meja[self.num]['nama']}")
+        self.nama_label.grid(row=0, column=0, pady=(0, 20))
+
+        self.nomor_meja_label = tk.Label(
+            self.content, text=f"No Meja: {self.num}")
+        self.nomor_meja_label.grid(row=0, column=3, columnspan=2)
+
+        k = 3
+        x = 0
+        for key in self.data:
+            label = tk.Label(self.content, text=key)
+            label.grid(row=k, column=0)
+            k += 1
+            kode_label = tk.Entry(self.content, width=20, fg="black")
+            nama_label = tk.Entry(self.content, width=20, fg="black")
+            harga_label = tk.Entry(self.content, width=20, fg="black")
+            kode_label.insert(tk.END, "Kode")
+            kode_label.grid(row=k, column=0)
+            kode_label['state'] = 'readonly'
+            nama_label.insert(tk.END, "Nama")
+            nama_label.grid(row=k, column=1)
+            nama_label['state'] = 'readonly'
+            harga_label.insert(tk.END, "Harga")
+            harga_label.grid(row=k, column=2)
+            harga_label['state'] = 'readonly'
+
+            info_label = tk.Entry(self.content, width=20, fg="black")
+            if key == "MEALS":
+                info_label.insert(tk.END, "Kegurihan")
+            elif key == "DRINKS":
+                info_label.insert(tk.END, "Kemanisan")
+            else:
+                info_label.insert(tk.END, "Keviralan")
+            info_label.grid(row=k, column=3)
+            info_label['state'] = 'readonly'
+
+            jumlah_label = tk.Entry(self.content, width=20, fg="black")
+            jumlah_label.insert(tk.END, "Jumlah")
+            jumlah_label.grid(row=k, column=4)
+            jumlah_label['state'] = 'readonly'
+
+            k += 1
+            for i in range(len(self.data[key])):
+                for j in range(len(self.data[key][0])):
+                    entry = tk.Entry(self.content, width=20, fg='black')
+                    entry.grid(row=k, column=j)
+                    entry.insert(tk.END, self.data[key][i][j])
+                    entry['state'] = 'readonly'
+                x += 1
+
+                jumlah = tk.Entry(self.content, width=20, fg="black")
+                jumlah.insert(tk.END, meja[self.num]
+                              ["pesanan"][x-1])
+                jumlah.grid(
+                    row=k, column=len(self.data[key][0]))
+                k += 1
+
+        self.total_label = tk.Label(
+            self.content, text=f"Total harga: {meja[self.num]['total']}", font="Arial 12 bold")
+        self.total_label.grid(row=k+1, column=4, pady=(40, 0))
+        self.btn_container = tk.Frame(self)
+
+        self.kembali_btn = tk.Button(
+            self.btn_container, text="Kembali", fg="#fff", bg="#4472C4", command=self.destroy, width=20)
+        self.ok_btn = tk.Button(self.btn_container, fg="#fff", text="OK",
+                                bg="#4472C4", width=20, command=self.lanjut)
+        self.kembali_btn.grid(row=0, column=0, padx=(5, 5))
+        self.ok_btn.grid(row=0, column=1, padx=(5, 5))
+        self.btn_container.grid(row=k+2, column=0, pady=(0, 40))
+
+        self.content.grid(row=0, column=0, padx=(40, 40), pady=(40, 40))
+
+    def lanjut(self, *_):
+        meja[self.num] = -1
+        self.master.render_meja()
+        self.destroy()
 
 
 class SelesaiGunakanMeja(TampilanMeja):
@@ -137,20 +235,31 @@ class SelesaiGunakanMeja(TampilanMeja):
         super().__init__(master)
 
     def warna_meja(self, num):
-        if meja[num] > -1:
+        if meja[num] != -1:
             return "#f00"
         return "#bbb"
 
     def meja_select(self, event):
-        if meja[int(event.widget["text"])] > -1:
-            meja[int(event.widget["text"])] = -1
-            self.destroy()
+        if meja[int(event.widget["text"])] != -1:
+            TablePesanan(int(event.widget["text"]), menu, self)
 
     def render_meja(self, *_):
         self.title = tk.Label(
             self, text="Silahkan klik meja kosong yang diinginkan:")
-        self.title.grid(row=0, column=0, padx=(40, 40))
-        return super().render_meja(*_)
+        self.title.grid(row=0, column=0, padx=(40, 40), pady=(20, 20))
+        super().render_meja(*_)
+        self.info_container = tk.Frame(self)
+        self.info_label = tk.Label(
+            self.info_container, text="Info", font="Arial 11 bold")
+        self.info_1 = tk.Label(self.info_container, text="Merah: Terisi")
+        self.info_2 = tk.Label(self.info_container, text="Abu-abu: Kosong")
+        self.info_label.grid(row=0, column=0)
+        self.info_1.grid(row=1, column=0)
+        self.info_2.grid(row=2, column=0)
+        self.info_container.grid(row=2, column=0)
+        self.back_btn = tk.Button(
+            self, bg="#4472C4", fg="#fff", text="Kembali", command=self.destroy, width=20)
+        self.back_btn.grid(row=3, column=0, pady=(40, 20))
 
 
 class PilihMeja(TampilanMeja):
@@ -167,12 +276,12 @@ class PilihMeja(TampilanMeja):
     def warna_meja(self, num):
         if num == self.curr.get():
             return "#4472C4"
-        elif meja[num] > -1:
+        elif meja[num] != -1:
             return "#f00"
         return "#bbb"
 
     def meja_select(self, event):
-        if meja[int(event.widget["text"])] > -1:
+        if meja[int(event.widget["text"])] != -1:
             return
 
         self.curr.set(int(event.widget["text"]))
@@ -180,14 +289,29 @@ class PilihMeja(TampilanMeja):
     def render_meja(self, *_):
         self.title = tk.Label(
             self, text="Silahkan klik meja kosong yang diinginkan:")
-        self.title.grid(row=0, column=0, padx=(40, 40))
+        self.title.grid(row=0, column=0, padx=(40, 40), pady=(20, 20))
         super().render_meja(*_)
+        self.info_container = tk.Frame(self)
+        self.info_label = tk.Label(
+            self.info_container, text="Info", font="Arial 11 bold")
+        self.info_1 = tk.Label(self.info_container, text="Merah: Terisi")
+        self.info_2 = tk.Label(self.info_container, text="Abu-abu: Kosong")
+        self.info_3 = tk.Label(self.info_container, text="Biru: Meja Anda")
+
+        self.info_label.grid(row=0, column=0)
+        self.info_1.grid(row=1, column=0)
+        self.info_2.grid(row=2, column=0)
+        self.info_3.grid(row=3, column=0)
+
+        self.info_container.grid(row=2, column=0)
+        self.btn_container = tk.Frame(self)
         self.back_btn = tk.Button(
-            self, bg="#4472C4", text="Kembali", fg="#fff", command=self.destroy, width=20)
+            self.btn_container, bg="#4472C4", text="Kembali", fg="#fff", command=self.destroy, width=20)
         self.next_btn = tk.Button(
-            self, bg="#4472C4", fg="#fff", text="OK", command=self.update_nomor, width=20)
-        self.back_btn.grid(row=3, column=0)
-        self.next_btn.grid(row=3, column=1)
+            self.btn_container, bg="#4472C4", fg="#fff", text="OK", command=self.update_nomor, width=20)
+        self.back_btn.grid(row=0, column=0, padx=(0, 5))
+        self.next_btn.grid(row=0, column=1, padx=(5, 0))
+        self.btn_container.grid(row=3, column=0, padx=(40, 40), pady=(20, 20))
 
 
 class Table(tk.Toplevel):
@@ -198,20 +322,13 @@ class Table(tk.Toplevel):
         self.total = 0
         self.int_var = []
         self.prices = []
-        self.nomor_meja = tk.IntVar(self, self.get_available_table(meja))
+        self.nomor_meja = tk.IntVar(
+            self, self.master.get_available_table(meja))
         self.nomor_meja.trace("w", self.update_nomor_meja)
         self.generate_table()
 
     def update_nomor_meja(self, *_):
         self.nomor_meja_label["text"] = f"No Meja: {self.nomor_meja.get()}"
-
-    # Mencari meja tersedia dengan nomor terkecil
-    def get_available_table(self, table):
-        min_val = 100  # Batas perbandingan
-        for num in table:  # Algoritma minimum search dengan metode iterasi
-            if table[num] == -1 and num < min_val:
-                min_val = num
-        return min_val  # jika ada meja yang tersedia maka hasilnya nomor meja minimum jika tidak maka hasilnya 100
 
     def generate_table(self):
         self.content = tk.Frame(self)
@@ -223,9 +340,9 @@ class Table(tk.Toplevel):
         self.nomor_meja_label = tk.Label(
             self.meja_container, text=f"No Meja: {self.nomor_meja.get()}")
         self.ganti_nomor_btn = tk.Button(
-            self.meja_container, text="Ubah", command=self.pilih_meja)
+            self.meja_container, text="Ubah", command=self.pilih_meja, bg="#4472C4", fg="#fff", width=10)
         self.nomor_meja_label.grid(row=0, column=0)
-        self.ganti_nomor_btn.grid(row=0, column=1)
+        self.ganti_nomor_btn.grid(row=0, column=1, padx=(5, 0))
         self.meja_container.grid(row=0, column=3, columnspan=2)
 
         k = 3
@@ -297,8 +414,10 @@ class Table(tk.Toplevel):
         self.content.grid(row=0, column=0, padx=(40, 40), pady=(40, 40))
 
     def lanjut(self):
-        meja[self.nomor_meja.get()] = self.total
+        meja[self.nomor_meja.get()] = {"nama": self.nama, "total": self.total, "pesanan": [
+            var.get() for var in self.int_var]}
         self.destroy()
+        self.master.destroy()
 
     def pilih_meja(self):
         PilihMeja(self)
@@ -314,12 +433,8 @@ def main():
     global meja, menu
     meja = {i: -1 for i in range(10)}
     menu = parse_menu()
-
-    # TODO mengolah data menu
-
     window = tk.Tk()
-    cafe = Main(window)
-    # Table(menu, window)
+    Main(window)
     window.mainloop()
 
 
