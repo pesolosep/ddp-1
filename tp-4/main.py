@@ -91,50 +91,22 @@ class BuatPesanan(tk.Toplevel):
         Table(menu, self.nama.get(), self.master)
 
 
-class SelesaiGunakanMeja(tk.Toplevel):
+class TampilanMeja(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
-        self.master.geometry("400x200")
-        self.title("Kafe Daun-Daun Pacilkom v2.0 🌿")
-
-        self.lbl_command = tk.Label(
-            self, text="Silakan klik meja yang selesai digunakan:")
-        self.lbl_command.grid(column=0, row=0)
-
-        # TODO
-
-        self.mainloop()
-
-
-class SelectTable(tk.Toplevel):
-    def __init__(self, master=None):
-        super().__init__(master)
-        self.master = master
-        self.curr = tk.IntVar(self.master, self.master.nomor_meja.get())
-        self.curr.trace("w", self.render_meja)
         self.list_meja = []
         self.render_meja()
 
-    def update_nomor(self, *_):
-        self.master.nomor_meja.set(self.curr.get())
-        self.destroy()
-
     def meja_select(self, event):
-        if meja[int(event.widget["text"])] > -1:
-            return
-
-        self.curr.set(int(event.widget["text"]))
+        pass
 
     def warna_meja(self, num):
-        if num == self.curr.get():
-            return "#4472C4"
-        elif meja[num] > -1:
-            return "#f00"
-        return "#bbb"
+        return "#ccc"
+
+    def update_nomor(self, *_):
+        self.destroy()
 
     def render_meja(self, *_):
-        self.title = tk.Label(
-            self, text="Silahkan klik meja kosong yang diinginkan:")
         self.container = tk.Frame(self)
         [btn.destroy for btn in self.list_meja]
         for num in meja:
@@ -151,7 +123,6 @@ class SelectTable(tk.Toplevel):
         self.info_2 = tk.Label(self.info_container, text="Abu-abu: Kosong")
         self.info_3 = tk.Label(self.info_container, text="Biru: Meja Anda")
 
-        self.title.grid(row=0, column=0, padx=(40, 40))
         self.info_label.grid(row=0, column=0)
         self.info_1.grid(row=1, column=0)
         self.info_2.grid(row=2, column=0)
@@ -160,6 +131,57 @@ class SelectTable(tk.Toplevel):
             40, 40), pady=(5, 5), columnspan=3)
         self.info_container.grid(row=2, column=0)
 
+
+class SelesaiGunakanMeja(TampilanMeja):
+    def __init__(self, master=None):
+        super().__init__(master)
+
+    def warna_meja(self, num):
+        if meja[num] > -1:
+            return "#f00"
+        return "#bbb"
+
+    def meja_select(self, event):
+        if meja[int(event.widget["text"])] > -1:
+            meja[int(event.widget["text"])] = -1
+            self.destroy()
+
+    def render_meja(self, *_):
+        self.title = tk.Label(
+            self, text="Silahkan klik meja kosong yang diinginkan:")
+        self.title.grid(row=0, column=0, padx=(40, 40))
+        return super().render_meja(*_)
+
+
+class PilihMeja(TampilanMeja):
+    def __init__(self, master=None):
+        self.master = master
+        self.curr = tk.IntVar(self.master, self.master.nomor_meja.get())
+        self.curr.trace("w", self.render_meja)
+        super().__init__(master)
+
+    def update_nomor(self, *_):
+        self.master.nomor_meja.set(self.curr.get())
+        self.destroy()
+
+    def warna_meja(self, num):
+        if num == self.curr.get():
+            return "#4472C4"
+        elif meja[num] > -1:
+            return "#f00"
+        return "#bbb"
+
+    def meja_select(self, event):
+        if meja[int(event.widget["text"])] > -1:
+            return
+
+        self.curr.set(int(event.widget["text"]))
+
+    def render_meja(self, *_):
+        self.title = tk.Label(
+            self, text="Silahkan klik meja kosong yang diinginkan:")
+        self.title.grid(row=0, column=0, padx=(40, 40))
+        super().render_meja(*_)
         self.back_btn = tk.Button(
             self, bg="#4472C4", text="Kembali", fg="#fff", command=self.destroy, width=20)
         self.next_btn = tk.Button(
@@ -171,15 +193,11 @@ class SelectTable(tk.Toplevel):
 class Table(tk.Toplevel):
     def __init__(self, data, nama, master=None):
         super().__init__(master)
-        # self.pack()
         self.data = data
         self.nama = nama
         self.total = 0
         self.int_var = []
         self.prices = []
-        # self.nomor_meja =
-        # self.total_rows = len(self.data)
-        # self.total_columns = len(self.data[0])
         self.nomor_meja = tk.IntVar(self, self.get_available_table(meja))
         self.nomor_meja.trace("w", self.update_nomor_meja)
         self.generate_table()
@@ -187,8 +205,8 @@ class Table(tk.Toplevel):
     def update_nomor_meja(self, *_):
         self.nomor_meja_label["text"] = f"No Meja: {self.nomor_meja.get()}"
 
-    @ staticmethod
-    def get_available_table(table):  # Mencari meja tersedia dengan nomor terkecil
+    # Mencari meja tersedia dengan nomor terkecil
+    def get_available_table(self, table):
         min_val = 100  # Batas perbandingan
         for num in table:  # Algoritma minimum search dengan metode iterasi
             if table[num] == -1 and num < min_val:
@@ -271,7 +289,7 @@ class Table(tk.Toplevel):
         self.kembali_btn = tk.Button(
             self.btn_container, text="Kembali", fg="#fff", bg="#4472C4", command=self.destroy, width=20)
         self.ok_btn = tk.Button(self.btn_container, fg="#fff", text="OK",
-                                bg="#4472C4", width=20)
+                                bg="#4472C4", width=20, command=self.lanjut)
         self.kembali_btn.grid(row=0, column=0, padx=(5, 5))
         self.ok_btn.grid(row=0, column=1, padx=(5, 5))
         self.btn_container.grid(row=k+2, column=0, pady=(0, 40))
@@ -279,10 +297,11 @@ class Table(tk.Toplevel):
         self.content.grid(row=0, column=0, padx=(40, 40), pady=(40, 40))
 
     def lanjut(self):
-        SelectTable(self.master)
+        meja[self.nomor_meja.get()] = self.total
+        self.destroy()
 
     def pilih_meja(self):
-        SelectTable(self)
+        PilihMeja(self)
 
     def update_total(self, *_):
         self.total = 0
@@ -293,7 +312,7 @@ class Table(tk.Toplevel):
 
 def main():
     global meja, menu
-    meja = {i: (-1 if i == 6 or i % 2 == 1 else 2) for i in range(10)}
+    meja = {i: -1 for i in range(10)}
     menu = parse_menu()
 
     # TODO mengolah data menu
